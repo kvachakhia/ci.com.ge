@@ -1,7 +1,7 @@
 <?php
 $id = $_GET['id'] ?? '';
-$key = "pk_8a629f7ca32dbf8a06e3b2ca4bc27c0fe90a54e08ffb7a960bd8e2892827f3fe";
-$url = "https://marketplace-backend-101825326475.us-east1.run.app/store/products/$id?fields=*,variants.*,vehicle_product.*,images.*";
+$key = "pk_2a4a899f20baeb0b17fbb95770f00c8387a44eef1e38fd647a174273cf28cd34";
+$url = "https://marketplace-backend-staging-155521043283.us-east1.run.app/store/inventory/products/$id?fields=*,variants.*,vehicle_product.*,images.*";
 
 $ch = curl_init($url);
 curl_setopt($ch, CURLOPT_HTTPHEADER, ["x-publishable-api-key: $key"]);

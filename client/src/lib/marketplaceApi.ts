@@ -1,4 +1,4 @@
-import type { Product } from "@shared/schema";
+  import type { Product } from "@shared/schema";
 
 // Determine the API base URL based on environment
 const getApiBaseUrl = () => {
@@ -17,7 +17,7 @@ const getApiBaseUrl = () => {
 };
 
 const MARKETPLACE_BASE_URL = getApiBaseUrl();
-const MARKETPLACE_PUBLISHABLE_KEY = import.meta.env.VITE_MARKETPLACE_PUBLISHABLE_KEY || "pk_8a629f7ca32dbf8a06e3b2ca4bc27c0fe90a54e08ffb7a960bd8e2892827f3fe";
+const MARKETPLACE_PUBLISHABLE_KEY = import.meta.env.VITE_MARKETPLACE_PUBLISHABLE_KEY || "pk_2a4a899f20baeb0b17fbb95770f00c8387a44eef1e38fd647a174273cf28cd34";
 
 // Debug: log the API key status
 if (!MARKETPLACE_PUBLISHABLE_KEY) {
@@ -32,22 +32,23 @@ export interface FetchProductsOptions {
 }
 
 /**
- * Fetch products from the external marketplace API
+ * Fetch products from the cached /store/inventory endpoint, which returns
+ * all published vehicles with full details (prices, variants, images) in one call.
  */
 export async function fetchProducts(options?: FetchProductsOptions): Promise<Product[]> {
   const baseUrl = MARKETPLACE_BASE_URL;
-  const path = `${baseUrl}/products`;
+  const path = `${baseUrl}/inventory`;
   const apiKey = MARKETPLACE_PUBLISHABLE_KEY;
-  
-  // Build query string manually for relative URLs
-  const params = new URLSearchParams();
-  params.set("limit", String(options?.limit ?? 12));
-  params.set(
-    "fields",
-    "id,title,thumbnail,variants.calculated_price,vehicle_product.*",
-  );
 
-  const url = `${path}?${params.toString()}`;
+  const params = new URLSearchParams();
+  if (options?.limit) {
+    params.set("limit", String(options.limit));
+  }
+  if (options?.search) {
+    params.set("q", options.search);
+  }
+  const qs = params.toString();
+  const url = qs ? `${path}?${qs}` : path;
 
   console.log("Fetching products from:", url);
   console.log("API Key present:", !!apiKey);
@@ -67,22 +68,34 @@ export async function fetchProducts(options?: FetchProductsOptions): Promise<Pro
   }
 
   const data = (await res.json()) as any;
-  const productsRaw = Array.isArray(data?.products) ? data.products : [];
+
+  // /inventory shape isn't documented yet — accept the most likely wrappers
+  // plus a bare array, so we don't silently empty out if the key is renamed.
+  const productsRaw: any[] = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.inventory)
+      ? data.inventory
+      : Array.isArray(data?.products)
+        ? data.products
+        : Array.isArray(data?.items)
+          ? data.items
+          : [];
+
+  if (productsRaw.length === 0) {
+    console.warn("No products parsed from /inventory response. Raw payload:", data);
+  }
 
   return productsRaw.map((p: any) => {
-    // Handle price - null, undefined, or number
-    const rawPrice = p?.variants?.[0]?.calculated_price;
+    const rawPrice = p?.variants?.[0]?.calculated_price ?? p?.price;
     const price = typeof rawPrice === "number" ? Math.trunc(rawPrice) : 0;
-    
-    console.log(`Product: ${p.id} - Title: ${p.title} - Price: ${price}`);
-    
+
     return {
       id: String(p.id),
       title: String(p.title ?? ""),
       thumbnail: p.thumbnail ? String(p.thumbnail) : null,
       price,
       currencyCode: "usd",
-      vehicle: p.vehicle_product ?? null,
+      vehicle: p.vehicle_product ?? p.vehicle ?? null,
     } satisfies Product;
   });
 }

@@ -38,7 +38,7 @@ export default defineConfig({
     },
     proxy: {
       "/api/marketplace": {
-        target: "https://marketplace-backend-101825326475.us-east1.run.app/store",
+        target: "https://marketplace-backend-staging-155521043283.us-east1.run.app/store",
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/marketplace/, ""),
         configure: (proxy, _options) => {
@@ -50,7 +50,7 @@ export default defineConfig({
             }
             // Fallback: use environment variable or hardcoded key
             else {
-              const key = process.env.VITE_MARKETPLACE_PUBLISHABLE_KEY || "pk_8a629f7ca32dbf8a06e3b2ca4bc27c0fe90a54e08ffb7a960bd8e2892827f3fe";
+              const key = process.env.VITE_MARKETPLACE_PUBLISHABLE_KEY || "pk_2a4a899f20baeb0b17fbb95770f00c8387a44eef1e38fd647a174273cf28cd34";
               proxyReq.setHeader("x-publishable-api-key", key);
             }
           });

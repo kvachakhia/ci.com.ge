@@ -1,6 +1,6 @@
 <?php
-$api_key = "pk_8a629f7ca32dbf8a06e3b2ca4bc27c0fe90a54e08ffb7a960bd8e2892827f3fe";
-$api_url = "https://marketplace-backend-101825326475.us-east1.run.app/store/products?limit=5&fields=id,title,thumbnail,variants.calculated_price,vehicle_product.*";
+$api_key = "pk_2a4a899f20baeb0b17fbb95770f00c8387a44eef1e38fd647a174273cf28cd34";
+$api_url = "https://marketplace-backend-staging-155521043283.us-east1.run.app/store/inventory/products?limit=5&fields=id,title,thumbnail,variants.calculated_price,vehicle_product.*";
 
 $ch = curl_init($api_url);
 curl_setopt($ch, CURLOPT_HTTPHEADER, ["x-publishable-api-key: $api_key"]);

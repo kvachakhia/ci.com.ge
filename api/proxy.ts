@@ -2,19 +2,19 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 const MARKETPLACE_URL =
   process.env.VITE_MARKETPLACE_URL ||
-  "https://marketplace-backend-101825326475.us-east1.run.app/store";
-const MARKETPLACE_PUBLISHABLE_KEY = process.env.VITE_MARKETPLACE_PUBLISHABLE_KEY || "pk_8a629f7ca32dbf8a06e3b2ca4bc27c0fe90a54e08ffb7a960bd8e2892827f3fe";
+  "https://marketplace-backend-staging-155521043283.us-east1.run.app/store";
+const MARKETPLACE_PUBLISHABLE_KEY = process.env.VITE_MARKETPLACE_PUBLISHABLE_KEY || "pk_2a4a899f20baeb0b17fbb95770f00c8387a44eef1e38fd647a174273cf28cd34";
 
 console.log("Marketplace URL:", MARKETPLACE_URL);
 console.log("API Key configured:", !!MARKETPLACE_PUBLISHABLE_KEY);
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Extract the path from the request URL
-  const path = req.url?.replace(/^\/api\/proxy/, "") || "/products";
+  const path = req.url?.replace(/^\/api\/proxy/, "") || "/inventory";
 
   try {
     const url = new URL(`${MARKETPLACE_URL}${path}`);
-    
+
     // Copy all query parameters
     Object.entries(req.query).forEach(([key, value]) => {
       if (Array.isArray(value)) {
@@ -23,14 +23,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         url.searchParams.set(key, String(value));
       }
     });
-
-    // Ensure required fields parameter is set
-    if (!url.searchParams.has("fields")) {
-      url.searchParams.set(
-        "fields",
-        "id,title,thumbnail,variants.calculated_price,vehicle_product.*"
-      );
-    }
 
     console.log("Marketplace proxy request to:", url.toString());
 

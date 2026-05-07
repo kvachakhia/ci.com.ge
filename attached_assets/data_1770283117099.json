@@ -6,7 +6,7 @@
     "card_bg": "#141414"
   },
   "api": {
-    "base_url": "https://marketplace-backend-101825326475.us-east1.run.app/store",
-    "publishable_key": "pk_8a629f7ca32dbf8a06e3b2ca4bc27c0fe90a54e08ffb7a960bd8e2892827f3fe"
+    "base_url": "https://marketplace-backend-staging-155521043283.us-east1.run.app/store/inventory",
+    "publishable_key": "pk_2a4a899f20baeb0b17fbb95770f00c8387a44eef1e38fd647a174273cf28cd34"
   }
 }
