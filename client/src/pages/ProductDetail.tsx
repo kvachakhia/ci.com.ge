@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Link, useParams } from "wouter";
 import AppShell from "@/components/AppShell";
 import AnimatedPage from "@/components/AnimatedPage";
@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import PriceTag, { formatMoney } from "@/components/PriceTag";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, ExternalLink, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, ShieldCheck, Sparkles } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 
 function safeEntries(vehicle: unknown): Array<[string, string]> {
@@ -33,6 +33,11 @@ function safeEntries(vehicle: unknown): Array<[string, string]> {
 export default function ProductDetail() {
   const params = useParams<{ id: string }>();
   const id = params?.id;
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  useEffect(() => {
+    setActiveImageIndex(0);
+  }, [id]);
 
   const { data: settings } = useSiteSettings();
   const brand = settings?.brandName || "Caucasus Impex";
@@ -172,19 +177,92 @@ export default function ProductDetail() {
                     </div>
                   </div>
 
-                  <div className="mt-5 rounded-3xl border border-border/60 bg-background/20 overflow-hidden">
-                    {product.thumbnail ? (
-                      <img
-                        src={product.thumbnail}
-                        alt={product.title}
-                        className="h-[320px] sm:h-[420px] w-full object-cover"
-                      />
-                    ) : (
-                      <div className="h-[320px] sm:h-[420px] w-full grid place-items-center text-muted-foreground">
-                        <div className="text-sm">No thumbnail available</div>
+                  {(() => {
+                    const gallery = product.images && product.images.length > 0
+                      ? product.images
+                      : product.thumbnail
+                        ? [{ id: "thumb", url: product.thumbnail, rank: 0 }]
+                        : [];
+                    const safeIndex = Math.min(activeImageIndex, Math.max(gallery.length - 1, 0));
+                    const active = gallery[safeIndex];
+                    const hasMultiple = gallery.length > 1;
+                    return (
+                      <div className="mt-5 space-y-3">
+                        <div className="relative rounded-3xl border border-border/60 bg-background/20 overflow-hidden">
+                          {active ? (
+                            <img
+                              src={active.url}
+                              alt={`${product.title} — image ${safeIndex + 1}`}
+                              className="h-[320px] sm:h-[420px] w-full object-cover"
+                              data-testid="product-image-main"
+                            />
+                          ) : (
+                            <div className="h-[320px] sm:h-[420px] w-full grid place-items-center text-muted-foreground">
+                              <div className="text-sm">No image available</div>
+                            </div>
+                          )}
+
+                          {hasMultiple && (
+                            <>
+                              <button
+                                type="button"
+                                aria-label="Previous image"
+                                onClick={() =>
+                                  setActiveImageIndex(
+                                    (safeIndex - 1 + gallery.length) % gallery.length,
+                                  )
+                                }
+                                className="absolute left-3 top-1/2 -translate-y-1/2 grid place-items-center h-10 w-10 rounded-full border border-border/60 bg-background/70 backdrop-blur hover:bg-background"
+                              >
+                                <ChevronLeft className="h-5 w-5" />
+                              </button>
+                              <button
+                                type="button"
+                                aria-label="Next image"
+                                onClick={() =>
+                                  setActiveImageIndex((safeIndex + 1) % gallery.length)
+                                }
+                                className="absolute right-3 top-1/2 -translate-y-1/2 grid place-items-center h-10 w-10 rounded-full border border-border/60 bg-background/70 backdrop-blur hover:bg-background"
+                              >
+                                <ChevronRight className="h-5 w-5" />
+                              </button>
+                              <div className="absolute bottom-3 right-3 rounded-full bg-background/70 backdrop-blur px-3 py-1 text-xs font-semibold">
+                                {safeIndex + 1} / {gallery.length}
+                              </div>
+                            </>
+                          )}
+                        </div>
+
+                        {hasMultiple && (
+                          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+                            {gallery.map((img, i) => (
+                              <button
+                                key={img.id}
+                                type="button"
+                                onClick={() => setActiveImageIndex(i)}
+                                aria-label={`View image ${i + 1}`}
+                                data-testid={`product-image-thumb-${i}`}
+                                className={cn(
+                                  "shrink-0 rounded-xl overflow-hidden border transition-all",
+                                  "h-16 w-24 sm:h-20 sm:w-28",
+                                  i === safeIndex
+                                    ? "border-primary ring-2 ring-primary/40"
+                                    : "border-border/60 hover:border-primary/40",
+                                )}
+                              >
+                                <img
+                                  src={img.url}
+                                  alt=""
+                                  className="h-full w-full object-cover"
+                                  loading="lazy"
+                                />
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
+                    );
+                  })()}
 
                   <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="rounded-2xl border border-border/60 bg-background/20 p-4">

@@ -3,10 +3,17 @@ import { z } from "zod";
 /**
  * Product type representing an item from the marketplace
  */
+export interface ProductImage {
+  id: string;
+  url: string;
+  rank: number;
+}
+
 export interface Product {
   id: string;
   title: string;
   thumbnail: string | null;
+  images: ProductImage[];
   price: number;
   currencyCode: string;
   vehicle: Record<string, any> | null;

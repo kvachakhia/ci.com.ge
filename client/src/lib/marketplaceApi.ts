@@ -1,4 +1,27 @@
-  import type { Product } from "@shared/schema";
+  import type { Product, ProductImage } from "@shared/schema";
+
+function normalizeImages(p: any): ProductImage[] {
+  const candidates: any[] =
+    (Array.isArray(p?.vehicle_product?.images) && p.vehicle_product.images) ||
+    (Array.isArray(p?.vehicle?.images) && p.vehicle.images) ||
+    (Array.isArray(p?.images) && p.images) ||
+    [];
+
+  const seen = new Set<string>();
+  const images: ProductImage[] = [];
+  candidates.forEach((img: any, idx: number) => {
+    const url = typeof img === "string" ? img : img?.url;
+    if (!url || seen.has(url)) return;
+    seen.add(url);
+    images.push({
+      id: String(img?.id ?? url),
+      url: String(url),
+      rank: typeof img?.rank === "number" ? img.rank : idx,
+    });
+  });
+  images.sort((a, b) => a.rank - b.rank);
+  return images;
+}
 
 // Determine the API base URL based on environment
 const getApiBaseUrl = () => {
@@ -94,10 +117,14 @@ export async function fetchProducts(options?: FetchProductsOptions): Promise<Pro
     const rawPrice = p?.variants?.[0]?.calculated_price ?? p?.price;
     const price = typeof rawPrice === "number" ? Math.trunc(rawPrice) : 0;
 
+    const images = normalizeImages(p);
+    const thumbnail = p.thumbnail ? String(p.thumbnail) : images[0]?.url ?? null;
+
     return {
       id: String(p.id),
       title: String(p.title ?? ""),
-      thumbnail: p.thumbnail ? String(p.thumbnail) : null,
+      thumbnail,
+      images,
       price,
       currencyCode: "usd",
       vehicle: p.vehicle_product ?? p.vehicle ?? null,
@@ -113,14 +140,9 @@ export async function fetchProduct(id: string): Promise<Product | null> {
   const path = `${baseUrl}/products/${id}`;
   const apiKey = MARKETPLACE_PUBLISHABLE_KEY;
   
-  // Build query string manually for relative URLs
-  const params = new URLSearchParams();
-  params.set(
-    "fields",
-    "id,title,thumbnail,variants.calculated_price,vehicle_product.*",
-  );
-
-  const url = `${path}?${params.toString()}`;
+  // No `fields` filter — request the default payload so we get images
+  // (and any nested vehicle data) without guessing the relation path.
+  const url = path;
 
   console.log("Fetching product from:", url);
   console.log("API Key present:", !!apiKey);
@@ -160,10 +182,19 @@ export async function fetchProduct(id: string): Promise<Product | null> {
   
   console.log(`Fetched product: ${p.id} - Title: ${p.title} - Price: ${price} - Vehicle:`, p.vehicle_product);
   
+  const images = normalizeImages(p);
+  const thumbnail = p.thumbnail ? String(p.thumbnail) : images[0]?.url ?? null;
+
+  console.log(`Images parsed: ${images.length}`, {
+    productImages: p.images,
+    vehicleProductImages: p.vehicle_product?.images,
+  });
+
   return {
     id: String(p.id),
     title: String(p.title ?? ""),
-    thumbnail: p.thumbnail ? String(p.thumbnail) : null,
+    thumbnail,
+    images,
     price,
     currencyCode: "usd",
     vehicle: p.vehicle_product ?? null,
