@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import PriceTag, { formatMoney } from "@/components/PriceTag";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, ShieldCheck, Sparkles, X, ZoomIn } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 
 function safeEntries(vehicle: unknown): Array<[string, string]> {
@@ -34,10 +34,26 @@ export default function ProductDetail() {
   const params = useParams<{ id: string }>();
   const id = params?.id;
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [isZoomOpen, setIsZoomOpen] = useState(false);
 
   useEffect(() => {
     setActiveImageIndex(0);
+    setIsZoomOpen(false);
   }, [id]);
+
+  useEffect(() => {
+    if (!isZoomOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsZoomOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [isZoomOpen]);
 
   const { data: settings } = useSiteSettings();
   const brand = settings?.brandName || "Caucasus Impex";
@@ -92,33 +108,45 @@ export default function ProductDetail() {
   return (
     <AppShell>
 
-      <Helmet>
-        <title>{`${year} ${make} ${model} for Sale | Caucasus Impex`}</title>
-        <meta
-          name="description"
-          content={`${year} ${make} ${model} ${trim ?? ""} available in ${location}. Premium listing from Caucasus Impex.`}
-        />
+      {(() => {
+        const headline = [year, make, model].filter(Boolean).join(" ").trim()
+          || product?.title
+          || "Vehicle";
+        const pageTitle = `${headline} for Sale | ${brand}`;
+        const descParts = [headline, trim, location && `available in ${location}`].filter(Boolean).join(" ");
+        const description = descParts
+          ? `${descParts}. Premium listing from ${brand}.`
+          : `Premium listing from ${brand}.`;
 
-        <meta property="og:title" content={`${year} ${make} ${model} for Sale | Caucasus Impex`} />
-        <meta property="og:description" content={`${brand} — ${year} ${make} ${model} ${trim ?? ""}. Premium listing with verified availability. Contact Caucasus Impex.`} />
-        <meta property="og:type" content="product" />
-
-
-        <script type="application/ld+json">
-          {JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "Product",
-            name: `${year} ${make} ${model}`,
-            brand: make,
-            offers: {
-              "@type": "Offer",
-              priceCurrency: "USD",
-              price: price || "0",
-              availability: "https://schema.org/InStock"
-            }
-          })}
-        </script>
-      </Helmet>
+        return (
+          <Helmet>
+            <title>{pageTitle}</title>
+            <meta name="description" content={description} />
+            <meta property="og:title" content={pageTitle} />
+            <meta
+              property="og:description"
+              content={`${brand} — ${headline}. Premium listing with verified availability.`}
+            />
+            <meta property="og:type" content="product" />
+            {product && (
+              <script type="application/ld+json">
+                {JSON.stringify({
+                  "@context": "https://schema.org",
+                  "@type": "Product",
+                  name: headline,
+                  brand: make || brand,
+                  offers: {
+                    "@type": "Offer",
+                    priceCurrency: (currency || "usd").toUpperCase(),
+                    price: price || "0",
+                    availability: "https://schema.org/InStock",
+                  },
+                })}
+              </script>
+            )}
+          </Helmet>
+        );
+      })()}
 
 
 
@@ -190,12 +218,23 @@ export default function ProductDetail() {
                       <div className="mt-5 space-y-3">
                         <div className="relative rounded-3xl border border-border/60 bg-background/20 overflow-hidden">
                           {active ? (
-                            <img
-                              src={active.url}
-                              alt={`${product.title} — image ${safeIndex + 1}`}
-                              className="h-[320px] sm:h-[420px] w-full object-cover"
-                              data-testid="product-image-main"
-                            />
+                            <button
+                              type="button"
+                              onClick={() => setIsZoomOpen(true)}
+                              aria-label="Zoom image"
+                              className="group relative block w-full cursor-zoom-in"
+                              data-testid="product-image-zoom-trigger"
+                            >
+                              <img
+                                src={active.url}
+                                alt={`${product.title} — image ${safeIndex + 1}`}
+                                className="h-[320px] sm:h-[420px] w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                                data-testid="product-image-main"
+                              />
+                              <div className="absolute right-3 top-3 grid place-items-center h-9 w-9 rounded-full border border-border/60 bg-background/70 backdrop-blur opacity-0 group-hover:opacity-100 transition-opacity">
+                                <ZoomIn className="h-4 w-4" />
+                              </div>
+                            </button>
                           ) : (
                             <div className="h-[320px] sm:h-[420px] w-full grid place-items-center text-muted-foreground">
                               <div className="text-sm">No image available</div>
@@ -258,6 +297,66 @@ export default function ProductDetail() {
                                 />
                               </button>
                             ))}
+                          </div>
+                        )}
+
+                        {isZoomOpen && active && (
+                          <div
+                            role="dialog"
+                            aria-modal="true"
+                            aria-label="Image viewer"
+                            onClick={() => setIsZoomOpen(false)}
+                            className="fixed inset-0 z-[100] grid place-items-center bg-black/90 backdrop-blur-sm p-4 sm:p-8"
+                            data-testid="product-image-lightbox"
+                          >
+                            <button
+                              type="button"
+                              aria-label="Close"
+                              onClick={() => setIsZoomOpen(false)}
+                              className="absolute top-4 right-4 grid place-items-center h-10 w-10 rounded-full border border-white/20 bg-white/10 text-white hover:bg-white/20"
+                            >
+                              <X className="h-5 w-5" />
+                            </button>
+
+                            <img
+                              src={active.url}
+                              alt={`${product.title} — image ${safeIndex + 1}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="max-h-[90vh] max-w-[95vw] object-contain rounded-xl shadow-2xl cursor-zoom-out"
+                              data-testid="product-image-lightbox-main"
+                            />
+
+                            {hasMultiple && (
+                              <>
+                                <button
+                                  type="button"
+                                  aria-label="Previous image"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveImageIndex(
+                                      (safeIndex - 1 + gallery.length) % gallery.length,
+                                    );
+                                  }}
+                                  className="absolute left-4 top-1/2 -translate-y-1/2 grid place-items-center h-12 w-12 rounded-full border border-white/20 bg-white/10 text-white hover:bg-white/20"
+                                >
+                                  <ChevronLeft className="h-6 w-6" />
+                                </button>
+                                <button
+                                  type="button"
+                                  aria-label="Next image"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveImageIndex((safeIndex + 1) % gallery.length);
+                                  }}
+                                  className="absolute right-4 top-1/2 -translate-y-1/2 grid place-items-center h-12 w-12 rounded-full border border-white/20 bg-white/10 text-white hover:bg-white/20"
+                                >
+                                  <ChevronRight className="h-6 w-6" />
+                                </button>
+                                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-white/10 border border-white/20 backdrop-blur px-4 py-1.5 text-xs font-semibold text-white">
+                                  {safeIndex + 1} / {gallery.length}
+                                </div>
+                              </>
+                            )}
                           </div>
                         )}
                       </div>

@@ -140,9 +140,12 @@ export async function fetchProduct(id: string): Promise<Product | null> {
   const path = `${baseUrl}/products/${id}`;
   const apiKey = MARKETPLACE_PUBLISHABLE_KEY;
   
-  // No `fields` filter — request the default payload so we get images
-  // (and any nested vehicle data) without guessing the relation path.
-  const url = path;
+  const params = new URLSearchParams();
+  params.set(
+    "fields",
+    "id,title,thumbnail,images.*,variants.calculated_price,vehicle_product.*",
+  );
+  const url = `${path}?${params.toString()}`;
 
   console.log("Fetching product from:", url);
   console.log("API Key present:", !!apiKey);
