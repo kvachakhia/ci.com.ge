@@ -6,14 +6,19 @@ const getApiBaseUrl = () => {
     // Development: use Vite proxy
     return "/api/marketplace";
   }
-  // Production: use Vercel API proxy (or direct URL with CORS)
   const url = new URL(window.location.href);
   if (url.hostname === "localhost" || url.hostname.includes("127.0.0.1")) {
     // Local production build
     return "/api/marketplace";
   }
-  // Vercel deployment: use Vercel API route
-  return "/api/proxy";
+  // Production: prefer the direct marketplace URL (works on shared hosting
+  // where there is no /api/marketplace serverless function). Falls back to the
+  // Vercel proxy route only if VITE_MARKETPLACE_URL was not baked in.
+  const direct = import.meta.env.VITE_MARKETPLACE_URL;
+  if (typeof direct === "string" && direct.length > 0) {
+    return direct;
+  }
+  return "/api/marketplace";
 };
 
 const MARKETPLACE_BASE_URL = getApiBaseUrl();
